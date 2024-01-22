@@ -10,6 +10,7 @@ const { sendEmail } = require('../helpers/sendEmail');
 const { sendMessage } = require('../helpers/sendMessage');
 const otpModel = require('../models/otpModel');
 const Role = require('../models/Role');
+const getUserGroup = require('../helpers/getUserGroup');
 var accountSid = process.env.TWILIO_ACCOUNT_SID;
 var authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require("twilio") (accountSid, authToken);
@@ -234,8 +235,13 @@ const createUserByUpperManagement = async (req, res) => {
   try {
     console.log("req.body is", req.body);
     const userInfo = await userModel.findOne({ _id: req.userId }).populate('role');
+    
     if (userInfo?.role.roleName == "Upper Management") {
       const email = req.body.email.toLowerCase();
+      // console.log("req role is ",req.body.role)
+      const userGroup = await getUserGroup.getUserGroupByRoleId(req.body.role);
+      
+      console.log(userGroup)
       // var phoneno = req.body.phoneno;
       var ifuser;
       ifuser = await userModel.findOne({
@@ -278,6 +284,7 @@ const createUserByUpperManagement = async (req, res) => {
           address: req.body.address,
           //countrycode: req.body.countrycode,
           // phoneno: phoneno,
+          role_name: userGroup,
           role: req.body.role,
           // companyId: ifinvited ? ifinvited.companyId : null,
           profilepic: req.files
@@ -331,7 +338,7 @@ const login = async (req, res) => {
     console.log("req.body: ", req.body)
     const { email, phoneno, password } = req.body;
     console.log("phoneno: ", phoneno, "password: ", password)
-    // email = email.toLowerCase();
+    email = email.toLowerCase(); //last change
     const user = await userModel.findOne({
       $or: [
         //{ phoneno: phoneno },
