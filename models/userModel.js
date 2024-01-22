@@ -1,4 +1,5 @@
 var mongoose = require("mongoose");
+const { TrunkContextImpl } = require("twilio/lib/rest/trunking/v1/trunk");
 
 var Schema = mongoose.Schema;
 var user = new Schema({
@@ -20,6 +21,14 @@ var user = new Schema({
     required: false
   },
   password: {
+    type: String,
+    required: true
+  },
+  // roleName:{
+  //   type:mongoose.Schema.Types.
+
+  // },
+  role_name: {
     type: String,
     required: true
   },

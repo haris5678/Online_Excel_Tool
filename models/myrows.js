@@ -9,11 +9,11 @@ const rowSchema = new Schema(
         ref: "user"
       },
       targetDN: {
-        type: String,
+        type: Number,
         default: ""
       },
       outsource: {
-        type: String,
+        type: Number,
         default: null
       },
       dmRatio: {
@@ -32,7 +32,7 @@ const rowSchema = new Schema(
       },
       shippingFreigt: {
         value: {
-          type: String,
+          type: Number,
           default: ""
         },
         formula: {
@@ -42,7 +42,7 @@ const rowSchema = new Schema(
       },
       duty: {
         value: {
-          type: String,
+          type: Number,
           default: ""
         },
         formula: {
@@ -52,14 +52,59 @@ const rowSchema = new Schema(
       },
       landedCost: {
         value: {
-          type: String,
+          type: Number,
           default: ""
         },
         formula: {
           type: String,
           default: "sdfds"
         }
+      },
+
+      outbound: {
+        value: {
+          type: Number,
+          default: ""
+        },
+        formula: {
+          type: String,
+          default: "(Target DN) * 6.75%"
+        }
+      },
+
+      commission: {
+        value: {
+          type: Number,
+          default: ""
+        },
+        formula: {
+          type: String,
+          default: "(Target DN) * 9.81%"
+        }
+      },
+
+      defectiveReturn: {
+        value: {
+          type: Number,
+          default: ""
+        },
+        formula: {
+          type: String,
+          default: "(Target DN) * 1.49%"
+        }
+      },
+
+      otherVariableCost: {
+        value: {
+          type: Number,
+          default: ""
+        },
+        formula: {
+          type: String,
+          default: "(Target DN) * 3.25%"
+        }
       }
+
       // ... (other fields)
     }
   },

@@ -26,36 +26,8 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// console.log("row controller is ", rowController);
-//Route for sending registration OTP
 router.post("/addRowAsGroupA", verifyToken, rowController.addRow);
-router.post("/editRowAsGroupA", verifyToken, rowController.editRow);
+router.patch("/editRow", verifyToken, rowController.editRow);
+router.delete("/deleteRow", verifyToken, rowController.deleteRow);
 
-// //Route for verifying registration OTP
-// router.post("/confirmotp", userController.confirmOtp);
-
-// //Route for registering after verification (will only valid for Group admin role)
-// // router.post('/', userController.createUser)
-
-// //Route for registering after verification (will only valid for Group admin role)
-// router.post(
-//   "/createuser",
-//   verifyToken,
-//   userController.createUserByUpperManagement
-// );
-
-// //Route for registering after verification
-// router.post("/login", userController.login);
-
-// //Route for getting forget password otp on email
-// router.post("/forgetpassword", userController.forgetPassword);
-
-// //Route for verifying forget password otp
-// router.post("/verifyotp", userController.verifyOTP);
-
-// //Route for getting forget password otp on email
-// router.post("/resetpassword", userController.resetPassword);
-
-// //Route for getting Roles
-// router.get("/roles", userController.getRoles);
 module.exports = router;

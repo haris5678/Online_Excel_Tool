@@ -17,54 +17,7 @@ var authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require("twilio")(accountSid, authToken);
 var jwt = require("jsonwebtoken");
 const { verifyToken } = require("../helpers/VerifyToken");
-const getUserGroup = require("../helpers/getUserGroup");
-// const {}
-// const userModel = require("../models/userModel");
-// const verifyToken = require("../helpers/verifyToken")
-
-// const addRow = async (req, res) => {
-//   const user_id = await verifyToken(req.headers.authorization);
-//   console.log("user id is ", user_id);
-//   try {
-//     console.log("acces token is ", req.headers);
-//     const {
-//       userID,
-//       targetDN,
-//       outsource,
-//       dmRatio,
-//       nonPalletized40HQQty
-//     } = req.body;
-
-//     const newRow = new Row({
-//       userID: user_id,
-//       targetDN,
-//       outsource,
-//       dmRatio,
-//       nonPalletized40HQQty
-//     });
-
-//     await newRow.save();
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "OTP has been sent.",
-//       data: newRow
-//     });
-//   } catch (err) {
-//     console.log(err);
-//     if (err.isJoi) {
-//       return res.status(422).json({
-//         success: false,
-//         message: err.details[0].message
-//       });
-//     } else {
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal Server Error"
-//       });
-//     }
-//   }
-// };
+const { getUserGroup } = require("../helpers/getUserGroup");
 
 const addRow = async (req, res) => {
   try {
@@ -81,10 +34,12 @@ const addRow = async (req, res) => {
       nonPalletized40HQQty,
       shippingFreigt,
       duty,
-      landedCost
+      landedCost,
+      outbound,
+      commission,
+      defectiveReturn,
+      otherVariableCost
     } = req.body;
-
-    // return;
 
     // Create a new row based on the user group
 
@@ -99,21 +54,32 @@ const addRow = async (req, res) => {
           nonPalletized40HQQty
         }
       });
-    } else if (userGroup === "Group B") {
-      console.log("in group b");
-      newRow = new TestRow({
-        // userID: user_id,
-        GroupB: {
-          userID: user_id,
-          "shippingFreigt.formula": shippingFreigt,
-          "duty.formula": duty,
-          "landedCost.formula": landedCost
-        }
-      });
     } else {
+      //------------------------------Logic start---------------------------
+
+      // Logic for add new row as member of Group B
+
+      // else if (userGroup === "Group B") {
+      //   console.log("in group b");
+      //   newRow = new TestRow({
+      //     // userID: user_id,
+      //     GroupB: {
+      //       userID: user_id,
+      //       "shippingFreigt.formula": shippingFreigt,
+      //       "duty.formula": duty,
+      //       "landedCost.formula": landedCost,
+      //       "outbound.formula": outbound,
+      //       "commission.formula": commission,
+      //       "defectiveReturn.formula": defectiveReturn,
+      //       "otherVariableCost.formula": otherVariableCost
+      //     }
+      //   });
+      // }
+
+      //------------------------------Logic start---------------------------
       return res.status(403).json({
         success: false,
-        message: "User not allowed to add rows."
+        message: `${userGroup} are not allowed to add rows`
       });
     }
 
@@ -142,6 +108,8 @@ const addRow = async (req, res) => {
   }
 };
 
+//-----------------------------------------------edit Row------------------------------------------
+
 const editRow = async (req, res) => {
   try {
     const user_id = await verifyToken(req.headers.authorization);
@@ -157,14 +125,16 @@ const editRow = async (req, res) => {
       nonPalletized40HQQty,
       shippingFreigt,
       duty,
-      landedCost
+      landedCost,
+      outbound,
+      commission,
+      defectiveReturn,
+      otherVariableCost
     } = req.body;
 
-    console.log("row id is ", rowId);
+    // console.log("row id is ", rowId);
 
-    // console.log("row id in shecma is ", Row._id)
-
-    console.log("testing");
+    // console.log("testing");
 
     if (!mongoose.Types.ObjectId.isValid(rowId)) {
       return res.status(400).json({
@@ -172,8 +142,6 @@ const editRow = async (req, res) => {
         message: "Invalid ObjectId format."
       });
     }
-
-    console.log("testing end");
 
     // if (!rowId) {
     //   return res.status(400).json({
@@ -226,6 +194,40 @@ const editRow = async (req, res) => {
         existingRow.GroupA.dmRatio = dmRatio || existingRow.GroupA.dmRatio;
         existingRow.GroupA.nonPalletized40HQQty =
           nonPalletized40HQQty || existingRow.GroupA.nonPalletized40HQQty;
+
+        const updateExistingRow = await TestRow.findById(rowId);
+
+        if (
+          !(
+            existingRow.GroupA.targetDN == null ||
+            existingRow.GroupA.targetDN == "" ||
+            existingRow.GroupA.targetDN == undefined
+          )
+        ) {
+          updateExistingRow.GroupB.outbound.value = parseFloat(
+            (existingRow.GroupA.targetDN * 0.0675).toFixed(2)
+          );
+
+          updateExistingRow.GroupB.commission.value = parseFloat(
+            (existingRow.GroupA.targetDN * 0.0981).toFixed(2)
+          );
+
+          updateExistingRow.GroupB.defectiveReturn.value = parseFloat(
+            (existingRow.GroupA.targetDN * 0.0149).toFixed(2)
+          );
+
+          updateExistingRow.GroupB.otherVariableCost.value = parseFloat(
+            (existingRow.GroupA.targetDN * 0.0325).toFixed(2)
+          );
+
+          await updateExistingRow.save();
+        } else {
+          return res.status(403).json({
+            success: false,
+            message: "Invalid TargetDN value "
+          });
+        }
+
         await existingRow.save();
       } else {
         return res.status(403).json({
@@ -234,13 +236,17 @@ const editRow = async (req, res) => {
         });
       }
     } else if (userGroup === "Group B") {
-      // console.log("user in if condition of B ", userGroup);
+      console.log("user in if condition of B ", userGroup);
       // Group B can provide any subset of these fields
       const allowedFields = [
         "rowId",
         "shippingFreigt",
         "duty",
-        "landedCost"
+        "landedCost",
+        "outbound",
+        "commission",
+        "defectiveReturn",
+        "otherVariableCost"
         // "nonPalletized40HQQty"
       ];
       const providedFields = Object.keys(req.body);
@@ -254,13 +260,18 @@ const editRow = async (req, res) => {
           message: `Invalid field(s) for Group B: ${invalidFields.join(", ")}.`
         });
       }
+
+
+      //--------------------Logic start---------------------------
+
+      //loogic for if same Group memeber is allowed to enter formula in same row
+
       // if (!existingRow.GroupB.userID) {
       //   existingRow.GroupB.userID = user_id.toString();
       //   // console.log("group b user id is not found", existingRow.GroupB.userID);
       // }
 
-      // if (existingRow.GroupB.userID.toString() === user_id.toString()) {
-      // console.log("in if after check");
+      //--------------------Logic start---------------------------
 
       existingRow.GroupB.shippingFreigt.formula =
         shippingFreigt || existingRow.GroupB.shippingFreigt.formula;
@@ -269,13 +280,56 @@ const editRow = async (req, res) => {
 
       existingRow.GroupB.landedCost.formula =
         landedCost || existingRow.GroupB.landedCost.formula;
+
+      existingRow.GroupB.outbound.formula =
+        outbound || existingRow.GroupB.outbound.formula;
+
+      existingRow.GroupB.commission.formula =
+        commission || existingRow.GroupB.commission.formula;
+
+      existingRow.GroupB.defectiveReturn.formula =
+        defectiveReturn || existingRow.GroupB.defectiveReturn.formula;
+
+      existingRow.GroupB.otherVariableCost.formula =
+        otherVariableCost || existingRow.GroupB.otherVariableCost.formula;
+
+      ////-----------------------------Required ------------------------
+
+      // formula's of these fields are clear yet
+
+      // console.log("target value is ", existingRow.GroupA.targetDN);
+
+      // existingRow.GroupB.shippingFreigt.value = parseFloat(
+      //   (existingRow.GroupA.targetDN * 0.0675).toFixed(2)
+      // );
+
+      // existingRow.GroupB.duty.value = parseFloat(
+      //   (existingRow.GroupA.targetDN * 0.0675).toFixed(2)
+      // );
+
+      // existingRow.GroupB.landedCost.value = parseFloat(
+      //   (existingRow.GroupA.targetDN * 0.0675).toFixed(2)
+      // );
+
+      ////-----------------------------Required ------------------------
+
+      existingRow.GroupB.outbound.value = parseFloat(
+        (existingRow.GroupA.targetDN * 0.0675).toFixed(2)
+      );
+
+      existingRow.GroupB.commission.value = parseFloat(
+        (existingRow.GroupA.targetDN * 0.0981).toFixed(2)
+      );
+
+      existingRow.GroupB.defectiveReturn.value = parseFloat(
+        (existingRow.GroupA.targetDN * 0.0149).toFixed(2)
+      );
+
+      existingRow.GroupB.otherVariableCost.value = parseFloat(
+        (existingRow.GroupA.targetDN * 0.0325).toFixed(2)
+      );
+
       await existingRow.save();
-      // } else {
-      //   return res.status(403).json({
-      //     success: false,
-      //     message: "Permission denied. You are not allowed to edit this row."
-      //   });
-      // }
     }
 
     return res.status(200).json({
@@ -301,62 +355,19 @@ const editRow = async (req, res) => {
   }
 };
 
-// const editRow = async (req, res) => {
-//   try {
-//     const { userID, rowID, editObj } = req.body;
-
-//     const row = await Row.findOne({ rowID });
-//     if (!row) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Row not found with this ID",
-//         data: null
-//       });
-//     }
-//     if (row.userID !== userID) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "You don't have the privilage to Edit this Row",
-//         data: null
-//       });
-//     }
-//     // console.log("ADD ROW")
-
-//     const newRow = new Row({
-//       userID,
-//       targetDN,
-//       outsource,
-//       dmRatio,
-//       nonPalletized40HQQty
-//     });
-
-//     await newRow.save();
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "OTP has been sent.",
-//       data: newRow
-//     });
-//   } catch (err) {
-//     console.log(err);
-//     if (err.isJoi) {
-//       return res.status(422).json({
-//         success: false,
-//         message: err.details[0].message
-//       });
-//     } else {
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal Server Error"
-//       });
-//     }
-//   }
-// };
+//-----------------------------------------------delete------------------------------------------
 
 const deleteRow = async (req, res) => {
   try {
-    const { userID, rowID } = req.body;
-    const row = await Row.findOne({ rowID });
+    const { rowID } = req.body;
+
+    console.log(rowID);
+
+    const userID = await verifyToken(req.headers.authorization);
+    const userGroup = await getUserGroup(userID);
+    console.log("user is ", userID);
+    const row = await TestRow.findById(rowID);
+    console.log(row);
     if (!row) {
       return res.status(404).json({
         success: false,
@@ -364,20 +375,30 @@ const deleteRow = async (req, res) => {
         data: null
       });
     }
-    if (row.userID !== userID) {
+
+    // console.log("row GroupA userID is ", row.GroupA.userID);
+    // console.log("row GroupA userID type is ", typeof row.GroupA.userID);
+    // console.log("current userID is ", userID);
+    // console.log("current userID type is ", typeof userID);
+    if (
+      row.GroupA.userID.toString() !== userID.toString() ||
+      userGroup !== "Group A"
+    ) {
       return res.status(401).json({
         success: false,
         message: "You don't have the privilage to Delete this Row",
         data: null
       });
     }
+
     // console.log("ADD ROW")
 
-    const delRow = await Row.findByIdAndDelete(rowID);
+    const delRow = await TestRow.findByIdAndDelete(rowID);
 
     return res.status(200).json({
       success: true,
-      message: "Row Deleted Successfully"
+      message: "Row Deleted Successfully",
+      deletedRow: delRow
     });
   } catch (err) {
     console.log(err);
@@ -397,6 +418,6 @@ const deleteRow = async (req, res) => {
 
 module.exports = {
   addRow,
-  editRow
-  // deleteRow
+  editRow,
+  deleteRow
 };
